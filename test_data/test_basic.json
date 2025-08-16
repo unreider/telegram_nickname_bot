@@ -1,0 +1,10 @@
+{
+  "-100123456789": {
+    "12345": {
+      "user_id": 12345,
+      "username": "testuser",
+      "nickname": "TestNick",
+      "added_at": "2025-08-17T00:38:55.533909"
+    }
+  }
+}
