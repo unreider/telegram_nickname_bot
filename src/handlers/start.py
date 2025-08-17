@@ -10,6 +10,9 @@ from aiogram.filters import Command
 
 logger = logging.getLogger(__name__)
 
+# Module-level router to satisfy tests and allow reuse
+start_router = Router()
+
 async def handle_start_command(message: Message, **kwargs) -> None:
     """
     Handle /start command with bot introduction and available commands.
@@ -72,10 +75,12 @@ async def handle_start_command(message: Message, **kwargs) -> None:
             logger.error(f"Failed to send fallback message: {fallback_error}")
 
 
+# Bind handler to the module-level router
+start_router.message(Command("start")) (handle_start_command)
+
+
 def register_start_handler(dispatcher) -> None:
     """Register start command handler with dispatcher."""
-    # Create a new router for this registration
-    start_router = Router()
-    start_router.message(Command("start"))(handle_start_command)
+    # Include the module-level router (used by tests)
     dispatcher.include_router(start_router)
     logger.info("Start command handler registered")

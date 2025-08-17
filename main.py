@@ -69,8 +69,54 @@ async def main():
                         await runner.cleanup()
                         logger.info("Webhook server stopped")
         else:
-            logger.info("Starting in polling mode")
-            await bot.start()
+            logger.info("Starting in polling mode with health server")
+            from aiohttp import web
+
+            # Ensure bot internals are initialized before starting services
+            await bot.initialize()
+
+            # Create minimal aiohttp app for health checks only
+            app = web.Application()
+
+            # Attach health endpoint using bot's health setup
+            try:
+                bot.app = app  # expose to bot for route registration
+                # Use existing internal helper to register /health
+                bot._setup_health_check()  # noqa: SLF001 (intentional internal use)
+            except Exception as e:
+                logger.error(f"Failed to set up health endpoint: {e}")
+                # Fallback: simple always-on health endpoint
+                async def basic_health(_request):
+                    return web.json_response({"status": "healthy"})
+                app.router.add_get("/health", basic_health)
+
+            runner = None
+            polling_task = None
+            try:
+                # Start HTTP server for health endpoint
+                runner = web.AppRunner(app)
+                await runner.setup()
+                site = web.TCPSite(runner, host="0.0.0.0", port=config.port)
+                await site.start()
+                logger.info(f"Health server started successfully on port {config.port}")
+
+                # Start polling in background
+                polling_task = asyncio.create_task(bot.start_polling())
+
+                # Wait for shutdown signal
+                await shutdown_event.wait()
+            finally:
+                # Stop polling task
+                if polling_task and not polling_task.done():
+                    polling_task.cancel()
+                    try:
+                        await polling_task
+                    except asyncio.CancelledError:
+                        pass
+                # Cleanup HTTP server
+                if runner:
+                    await runner.cleanup()
+                logger.info("Polling and health server stopped")
             
     except KeyboardInterrupt:
         logger.info("Bot stopped by user")
