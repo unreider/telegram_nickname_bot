@@ -165,6 +165,45 @@ class CommandValidationMiddleware(BaseMiddleware):
         return await handler(event, data)
 
 
+class WebhookLoggingMiddleware(BaseMiddleware):
+    """
+    Middleware for logging webhook requests and debugging.
+    """
+    
+    def __init__(self):
+        """Initialize the middleware."""
+        super().__init__()
+    
+    async def __call__(
+        self,
+        handler: Callable[[TelegramObject, Dict[str, Any]], Awaitable[Any]],
+        event: TelegramObject,
+        data: Dict[str, Any]
+    ) -> Any:
+        """
+        Log incoming webhook requests for debugging.
+        
+        Args:
+            handler: Next handler in the chain
+            event: Telegram event (Message, etc.)
+            data: Handler data dictionary
+            
+        Returns:
+            Handler result
+        """
+        # Log all incoming events for debugging
+        logger.info(f"📨 Received webhook event: {type(event).__name__}")
+        
+        if isinstance(event, Message):
+            logger.info(
+                f"📝 Message from @{event.from_user.username or 'unknown'} "
+                f"in chat {event.chat.type} (ID: {event.chat.id}): {event.text[:50]}..."
+            )
+        
+        # Continue to next handler
+        return await handler(event, data)
+
+
 def setup_middleware(dispatcher) -> None:
     """
     Register middleware with the dispatcher.
@@ -172,10 +211,13 @@ def setup_middleware(dispatcher) -> None:
     Args:
         dispatcher: Aiogram dispatcher instance
     """
-    # Register group chat validation middleware first
+    # Register webhook logging middleware first (for debugging)
+    dispatcher.message.middleware(WebhookLoggingMiddleware())
+
+    # Register group chat validation middleware second
     dispatcher.message.middleware(GroupChatMiddleware())
     
-    # Register command validation middleware second
+    # Register command validation middleware third
     dispatcher.message.middleware(CommandValidationMiddleware())
     
     logger.info("Middleware registered successfully")

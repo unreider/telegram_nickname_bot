@@ -174,13 +174,14 @@ class TelegramBot:
             raise ValueError("Webhook URL is required for webhook setup")
         
         try:
-            # Set webhook with retry logic
+            # Set webhook with retry logic and SSL handling
             await self._retry_api_call(
                 self.bot.set_webhook,
                 "set webhook",
                 max_retries=3,
                 url=self.config.webhook_url,
-                drop_pending_updates=True
+                drop_pending_updates=True,
+                allowed_updates=["message", "edited_message", "callback_query"]
             )
             logger.info(f"Webhook set to: {self.config.webhook_url}")
             
@@ -196,6 +197,15 @@ class TelegramBot:
             # Register webhook handler
             webhook_handler.register(self.app, path="/webhook")
             
+            # Add webhook verification endpoint for debugging
+            async def webhook_verify(request):
+                """Webhook verification endpoint for debugging."""
+                logger.info(f"Webhook verification request: {request.method} {request.url}")
+                logger.info(f"Headers: {dict(request.headers)}")
+                return web.json_response({"status": "webhook_ready"})
+            
+            self.app.router.add_get("/webhook-verify", webhook_verify)
+            
             # Add health check endpoint for Railway monitoring
             self._setup_health_check()
             
@@ -203,6 +213,17 @@ class TelegramBot:
             setup_application(self.app, self.dispatcher, bot=self.bot)
             
             logger.info("Webhook setup completed successfully")
+            
+            # Log webhook info for debugging
+            try:
+                webhook_info = await self.bot.get_webhook_info()
+                logger.info(f"Webhook info - URL: {webhook_info.url}")
+                logger.info(f"Webhook info - Pending updates: {webhook_info.pending_update_count}")
+                if webhook_info.last_error_message:
+                    logger.warning(f"Webhook last error: {webhook_info.last_error_message}")
+            except Exception as e:
+                logger.warning(f"Could not get webhook info: {e}")
+            
             return self.app
             
         except Exception as e:
