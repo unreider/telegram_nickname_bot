@@ -67,7 +67,9 @@ async def handle_all_command(message: Message, **kwargs) -> None:
         nickname_list = []
         for index, entry in enumerate(nicknames, 1):
             # Format: [order-number]. [telegram-username] - [user's-specified-nickname]
-            formatted_entry = f"{index}. @{entry.username} - {entry.nickname}"
+            # Escape underscores for Markdown compatibility
+            escaped_nickname = entry.nickname.replace('_', '\\_')
+            formatted_entry = f"{index}. @{entry.username} - {escaped_nickname}"
             nickname_list.append(formatted_entry)
         
         # Create response message
