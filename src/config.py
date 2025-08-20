@@ -71,6 +71,11 @@ class BotConfig:
     
     def use_webhook(self) -> bool:
         """Determine if webhook should be used instead of polling."""
+        # Check if webhook is forced to be disabled
+        force_polling = os.getenv("FORCE_POLLING", "false").lower() == "true"
+        if force_polling:
+            return False
+        
         return self.is_production() and self.webhook_url is not None
     
     def validate(self) -> None:

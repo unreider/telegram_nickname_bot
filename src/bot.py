@@ -228,6 +228,7 @@ class TelegramBot:
             
         except Exception as e:
             logger.error(f"Error during webhook setup: {e}")
+            # Don't raise the exception, let the caller handle fallback
             raise
     
     def _setup_health_check(self) -> None:
