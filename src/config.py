@@ -28,8 +28,12 @@ class BotConfig:
         # Validate required environment variables
         bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
         if not bot_token:
-            raise ValueError("TELEGRAM_BOT_TOKEN environment variable is required")
-        
+            raise ValueError(
+                "TELEGRAM_BOT_TOKEN environment variable is required. "
+                "For local development, ensure it's in your .env file. "
+                "For Railway deployment, set it in Railway's Variables tab."
+            )
+
         # Set default storage file path
         storage_file = os.getenv("STORAGE_FILE", "data/nicknames.json")
         
